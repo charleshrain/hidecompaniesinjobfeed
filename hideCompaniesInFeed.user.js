@@ -12,26 +12,24 @@ const BLOCK = [
 
 function blocked(text) {
     const t = (text || "").replace(/\s+/g, " ").trim();
-    return BLOCK.some((re) => re.test(t));
+    return BLOCK.some(re => re.test(t));
 }
 
-function hide(root) {
-    for (const p of root.querySelectorAll("p")) {
-        if (!blocked(p.textContent || "")) continue;
-        const card = p.closest('div[role="button"][componentkey^="job-card-component-ref-"]');
-        if (card) card.style.display = "none";
+function process() {
+    const cards = document.querySelectorAll('div[role="button"][componentkey^="job-card-component-ref-"]');
+    for (const card of cards) {
+        if (card.dataset.checked) continue;   // skip cards we already handled
+        card.dataset.checked = "1";
+        if (blocked(card.textContent)) card.style.display = "none";
     }
 }
 
-function walk(node) {
-    hide(node);
-    const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
-    let n;
-    while ((n = walker.nextNode())) {
-        if (n.shadowRoot) walk(n.shadowRoot);
-    }
+// debounce: wait for changes to settle before scanning
+let timer = null;
+function schedule() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(process, 200);
 }
 
-const run = () => walk(document);
-run();
-new MutationObserver(run).observe(document.documentElement, { childList: true, subtree: true });
+process();
+new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
